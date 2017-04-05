@@ -1,0 +1,14 @@
+#!/bin/bash
+TUNNEL_ID="$1"
+INTERFACE="$3"
+MTU="$4"
+batdev=bat4
+
+. /srv/tunneldigger/tunneldigger/broker/scripts/bridge_functions.sh
+
+# Set the interface to UP state
+ip link set dev $INTERFACE up mtu $MTU
+
+# Add the interface to our bridge
+ensure_bridge l2-br-has${MTU}
+brctl addif l2-br-has${MTU} $INTERFACE
