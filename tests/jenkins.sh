@@ -1,35 +1,32 @@
 #!/bin/sh
-# Alexander Couzens <lynxis@fe80.eu>
+# 2015-2016 Alexander Couzens <lynxis@fe80.eu>
 #
 # jenkins script
 
 set -e
 
-# prepare lxc container template
-$WORKSPACE/tests/tunneldigger.py --setup
+. $(dirname $0)/lib_ci.sh
 
 # retrieve git rev
-cd $WORKSPACE/
-NEW_REV=$(git log -1 --format=format:%H)
+NEW_REV=$(cd $WORKSPACE && git log -1 --format=format:%H)
 
-cd $WORKSPACE/tests/
+# compile the client
+test_client_compile
+
+# setup the base container
+setup_container
+
 # test the version aginst itself
-export CLIENT_REV=$NEW_REV
-export SERVER_REV=$NEW_REV
-nosetests3
+test_nose $NEW_REV $NEW_REV
 
-OLD_REV="c638231efca6b3a6e1c675ac0834a3e851ad1bdc 263eb59098fd11990b6ab75933fb7633055cbc9a 4e4f13cdc630c46909d47441093a5bdaffa0d67f"
-# do client NEW_REV against old revs
+OLD_REV="c638231efca6b3a6e1c675ac0834a3e851ad1bdc 4e4f13cdc630c46909d47441093a5bdaffa0d67f"
+# test against each other
 for rev in $OLD_REV ; do
-  export CLIENT_REV=$NEW_REV
-  export SERVER_REV=$rev
-  nosetests3
+  # old client, new server
+  test_nose $rev $NEW_REV
+
+  # new client, old server
+  test_nose $NEW_REV $rev
 done
 
-# do server NEW_REV against old revs
-for rev in $OLD_REV ; do
-  export CLIENT_REV=$rev
-  export SERVER_REV=$NEW_REV
-  nosetests3
-done
-
+test_usage $NEW_REV

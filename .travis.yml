@@ -1,3 +1,6 @@
+branches:
+  only:
+    - master
 language: python
 python:
  - 2.7
@@ -6,7 +9,7 @@ dist: trusty
 install:
   - sudo add-apt-repository universe
   - sudo apt-get -qq update
-  - sudo apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -qq --assume-no install bison build-essential flex gawk gettext git git-core libncurses5-dev libssl-dev lxc m4 subversion unzip zlib1g-dev python3-lxc python3-nose
+  - sudo apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -qq --assume-no install bison build-essential flex gawk gettext git git-core libncurses5-dev libssl-dev lxc m4 subversion unzip zlib1g-dev python3-lxc python3-nose linux-libc-dev libnl-dev
   - sudo modprobe l2tp_netlink
   - sudo modprobe l2tp_ip
   - sudo modprobe l2tp_eth
@@ -15,4 +18,12 @@ install:
   - sudo iptables -t nat -L >/dev/null
   - sudo /usr/bin/python3 ./tests/tunneldigger.py --setup
 script:
-  - sudo sh ./tests/travis.sh
+  - sudo -E sh ./tests/travis.sh
+
+env:
+  matrix:
+    - SELECT=nose OLD_REV=HEAD
+    - SELECT=nose OLD_REV=c638231efca6b3a6e1c675ac0834a3e851ad1bdc
+    - SELECT=nose OLD_REV=4e4f13cdc630c46909d47441093a5bdaffa0d67f
+    - SELECT=usage
+    - SELECT=client

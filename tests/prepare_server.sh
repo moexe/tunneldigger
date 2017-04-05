@@ -20,7 +20,7 @@ server.modules = (
         "mod_access",
 	)
 
-server.document-root        = "/testing/test-data"
+server.document-root        = "/"
 server.errorlog             = "/var/log/lighttpd/error.log"
 server.pid-file             = "/var/run/lighttpd.pid"
 server.username             = "www-data"
@@ -39,13 +39,21 @@ cd /srv/
 virtualenv env_tunneldigger
 
 . /srv/env_tunneldigger/bin/activate
-pip install -r /srv/tunneldigger/broker/requirements.txt
+if [ -f /srv/tunneldigger/broker/setup.py ]; then
+    cd /srv/tunneldigger/broker
+    python setup.py install
+else
+    pip install -r /srv/tunneldigger/broker/requirements.txt
+fi
 
 # configure tunneldigger
 # dont let cp fail when using an older version of tunneldigger
 cp /srv/tunneldigger/broker/l2tp_broker.cfg.example /srv/tunneldigger/broker/l2tp_broker.cfg || true
 sed -i "s/127.0.0.1/$IP/g" /srv/tunneldigger/broker/l2tp_broker.cfg
 sed -i "s/^interface=.*/interface=eth1/g" /srv/tunneldigger/broker/l2tp_broker.cfg
+
+# save the ip into a file where the http server can access it
+echo -n "$IP" > /ip.txt
 
 # WARNING hookpath must be without a leading slash!!!
 HOOKPATH=/testing/hook_server

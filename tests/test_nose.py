@@ -3,7 +3,10 @@
 import logging
 import lxc
 import os
+import signal
+from time import sleep
 import tunneldigger
+from tunneldigger import run_as_lxc
 
 # random hash
 CONTEXT = None
@@ -24,7 +27,7 @@ def setup_module():
     LOG.info("using context %s", CONTEXT)
     CLIENT, SERVER = tunneldigger.prepare_containers(CONTEXT, os.environ['CLIENT_REV'], os.environ['SERVER_REV'])
     SERVER_PID = tunneldigger.run_server(SERVER)
-    CLIENT_PID = tunneldigger.run_client(CLIENT)
+    CLIENT_PID = tunneldigger.run_client(CLIENT, ['-b', '172.16.16.1:8942'])
     # explicit no Exception when ping fails
     # it's better to poll the client for a ping rather doing a long sleep
     tunneldigger.check_ping(CLIENT, '192.168.254.1', 20)
@@ -41,15 +44,17 @@ class TestTunneldigger(object):
             raise RuntimeError("fail to ping server")
 
     def test_wget_tunneldigger_server(self):
-        ret = CLIENT.attach_wait(lxc.attach_run_command, ["wget", "-t", "2", "-T", "4", "http://192.168.254.1:8080/test_8m", '-O', '/dev/null'])
+        ret = CLIENT.attach_wait(lxc.attach_run_command, [
+            "wget", "-t", "2", "-T", "4", "http://192.168.254.1:8080/testing/test-data/test_8m", '-O', '/dev/null'])
         if ret != 0:
             raise RuntimeError("failed to run the tests")
 
     def test_ensure_tunnel_up_for_5m(self):
         # get id of l2tp0 iface
-        ## ip -o l | awk -F: '{ print $1 }'
+        first_interface_id = run_as_lxc(CLIENT, ['bash', '-c', 'ip -o link show l2tp0 | awk -F: \'{ print $1 }\''])
         # sleep 5 minutes
+        sleep(5 * 60)
         # get id of l2tp0 iface
-        ## ip -o l | awk -F: '{ print $1 }'
-        # assert early_id == later_id
-        pass
+        second_interface_id = run_as_lxc(CLIENT, ['bash', '-c', 'ip -o link show l2tp0 | awk -F: \'{ print $1 }\''])
+        LOG.info("Check l2tp is stable for 5m. first id %s == %s second id " % (first_interface_id, second_interface_id))
+        assert first_interface_id == second_interface_id
